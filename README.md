@@ -1,25 +1,12 @@
-```
-.--.   .--.      .-''-.     ____     __  .---.       ,-----.      .-_'''-.     .-_'''-.       .-''-.  .-------.     
-|  | _/  /     .'_ _   \    \   \   /  / | ,_|     .'  .-,  '.   '_( )_   \   '_( )_   \    .'_ _   \ |  _ _   \    
-| (`' ) /     / ( ` )   '    \  _. /  ',-./  )    / ,-.|  \ _ \ |(_ o _)|  ' |(_ o _)|  '  / ( ` )   '| ( ' )  |    
-|(_ ()_)     . (_ o _)  |     _( )_ .' \  '_ '`) ;  \  '_ /  | :. (_,_)/___| . (_,_)/___| . (_ o _)  ||(_ o _) /    
-| (_,_)   __ |  (_,_)___| ___(_ o _)'   > (_)  ) |  _`,/ \ _/  ||  |  .-----.|  |  .-----.|  (_,_)___|| (_,_).' __  
-|  |\ \  |  |'  \   .---.|   |(_,_)'   (  .  .-' : (  '\_/ \   ;'  \  '-   .''  \  '-   .''  \   .---.|  |\ \  |  | 
-|  | \ `'   / \  `-'    /|   `-'  /     `-'`-'|___\ `"/  \  ) /  \  `-'`   |  \  `-'`   |  \  `-'    /|  | \ `'   / 
-|  |  \    /   \       /  \      /       |        \'. \_/``".'    \        /   \        /   \       / |  |  \    /  
-`--'   `'-'     `'-..-'    `-..-'        `--------`  '-----'       `'-...-'     `'-...-'     `'-..-'  ''-'   `'-'                                                                                                                                                                                               
-```
-                                                       
-# :musical_keyboard:EntiKeyLogger:musical_keyboard:
-*La mejor defensa comienza con la comprensión del ataque* 🕶️
----
+                                                    
+# LinuxKeylogger
 
-**EntiKeyLogger** es una herramienta de demostración desarrollada en **Python**, diseñada con fines de **investigación y formación en ciberseguridad**.  
+**LinuxKeylogger** es una herramienta de demostración desarrollada en **Python**, diseñada con fines de **investigación y formación en ciberseguridad**.  
 Su objetivo es mostrar cómo operan los *keyloggers* a nivel técnico, permitiendo a los profesionales y estudiantes del área **comprender sus mecanismos**, **detectar comportamientos maliciosos** y **diseñar contramedidas efectivas**.
 
 > ⚠️ **Advertencia de Uso Ético**
 >
-> Esta herramienta ha sido desarrollada **exclusivamente con fines educativos y de investigación en ciberseguridad**, en el contexto del *Grado de Ciberseguridad de ENTI*.  
+> Esta herramienta ha sido desarrollada **exclusivamente con fines educativos y de investigación en ciberseguridad**.
 > El uso de este software para **monitorizar o registrar la actividad de un dispositivo sin el consentimiento explícito de su propietario** es **ilegal** y **éticamente inaceptable**.  
 > 
 > Los desarrolladores **no se responsabilizan del uso indebido** de esta herramienta.  
@@ -27,26 +14,26 @@ Su objetivo es mostrar cómo operan los *keyloggers* a nivel técnico, permitien
 
 ---
 
-## :hibiscus:Características:hibiscus:
+## Características
 
-- **Registro de pulsaciones** — Captura de todo tipo de teclas (letras, números y teclas especiales como Shift, Ctrl, Alt, Enter, Espacio, etc.) para análisis forense y detección de comportamiento malicioso.  
-- **Ejecución en segundo plano** — Modo silencioso pensado únicamente para pruebas en entornos controlados y con consentimiento explícito.  
-- **Salida ordenada a fichero** — Guarda los registros en un archivo `keylog.txt` en el directorio del proyecto, con marcas de tiempo y metadatos para facilitar el análisis.  
-- **Configuración sencilla** — Parámetros personalizables mediante `config.ini` para ajustar el alcance, formato de logs y modos de operación.  
-- **Compatibilidad con Linux** — Implementado y probado en sistemas Linux.  
-- **Captura del portapapeles** — Registro opcional del contenido del portapapeles para análisis de fugas de datos en pruebas controladas.  
-- **Envío de registros por correo (opcional y configurable)** — Mecanismo opcional para enviar informes a una cuenta autorizada; deshabilitado por defecto y requiere credenciales y consentimiento.
+- **Registro de pulsaciones** - Captura de todo tipo de teclas (letras, números y teclas especiales como Shift, Ctrl, Alt, Enter, Espacio, etc.) para análisis forense y detección de comportamiento malicioso.  
+- **Ejecución en segundo plano** - Modo silencioso pensado únicamente para pruebas en entornos controlados y con consentimiento explícito.  
+- **Salida ordenada a fichero** - Guarda los registros en un archivo `keylog.txt` en el directorio del proyecto, con marcas de tiempo y metadatos para facilitar el análisis.  
+- **Configuración sencilla** - Parámetros personalizables mediante `config.ini` para ajustar el alcance, formato de logs y modos de operación.  
+- **Compatibilidad con Linux** - Implementado y probado en sistemas Linux.  
+- **Captura del portapapeles** - Registro opcional del contenido del portapapeles para análisis de fugas de datos en pruebas controladas.  
+- **Envío de registros por correo (opcional y configurable)** - Mecanismo opcional para enviar informes a una cuenta autorizada; deshabilitado por defecto y requiere credenciales y consentimiento.
 > 📎 [**Ver _anexo 1_ para configuración de SMTPServer**](#anexo-1-Configuración-SMTP-Server)
 ---
 
-## :sunflower:Instalación:sunflower:
+##  Instalación
 
 Para poner en marcha la herramienta, necesitarás tener **Python 3** instalado en tu sistema.
 
 1. **Clona el repositorio:**
     ```bash
-    git clone https://github.com/cerodah/ENTI_keylogger.git
-    cd ENTI_keylogger
+    git clone https://github.com/Sote19/Linux_Keylogger
+    cd Linux_Keylogger
     ```
 
 2. **Instala las dependencias:**
@@ -62,11 +49,11 @@ Para poner en marcha la herramienta, necesitarás tener **Python 3** instalado e
    ```
    
 4. **Configura el archivo de parámetros:**
-    En el archivo `config.ini` puedes modificar todas las líneas **no comentadas** (`;` al inicio) para personalizar el comportamiento de la herramienta — como la ruta del archivo de registro, el modo de ejecución o las opciones de envío por correo.
+    En el archivo `config.ini` puedes modificar todas las líneas **no comentadas** (`;` al inicio) para personalizar el comportamiento de la herramienta, como la ruta del archivo de registro, el modo de ejecución o las opciones de envío por correo.
 
 ---
 
-## :four_leaf_clover:Uso Básico:four_leaf_clover:
+## Uso Básico
 
 Para ejecutar la herramienta, simplemente inicia el script principal desde la terminal:
 
@@ -77,11 +64,7 @@ El programa se ejecutará en segundo plano y comenzará a registrar las pulsacio
 
 Para detener el programa de manera manual, habrá que hacer la siguiente combinación de teclas: ```ctrl + shift + esc```
 
-![Video Demo](assets/running-keylogger.gif)
-
----
-
-## :maple_leaf:Estructura del proyecto:maple_leaf:
+## Estructura del proyecto
 ```bash
 ENTI_keylogger/
 │
@@ -93,7 +76,7 @@ ENTI_keylogger/
 ├── requirements.txt   # Dependencias necesarias
 └── README.md          # Documentación del proyecto
 ```
-# :leaves:Anexos:leaves:
+# Anexos
 ## Anexo 1 (Configuración SMTP Server)
 <details>
   <summary>Ver anexo 🔽</summary>
